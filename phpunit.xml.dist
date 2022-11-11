@@ -1,0 +1,10 @@
+<phpunit
+    bootstrap="./vendor/autoload.php"
+    colors="true"
+>
+    <testsuites>
+        <testsuite name="MySQL Tap">
+            <directory>test</directory>
+        </testsuite>
+    </testsuites>
+</phpunit>

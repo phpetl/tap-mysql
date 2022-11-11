@@ -1,0 +1,25 @@
+{
+    "streams": [
+        {
+            "tap_stream_id": "my_table",
+            "stream": "my_table",
+            "key_properties": [
+                "id"
+            ],
+            "bookmark_properties": [
+                "updated"
+            ],
+            "schema": {
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string",
+                        "maxLength": 255
+                    }
+                }
+            }
+        }
+    ]
+}

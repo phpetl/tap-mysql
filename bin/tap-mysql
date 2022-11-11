@@ -1,0 +1,27 @@
+<?php
+declare(strict_types=1);
+
+use PhpETL\Tap\MySQL\Config;
+use PhpETL\Tap\MySQL\Tap;
+
+require_once __DIR__ . '/../vendor/autoload.php';
+
+$opts = getopt('', [
+    'config:',
+    'state:',
+    'catalog:',
+]);
+
+if (!array_key_exists('config', $opts)) {
+    echo "A config file is required" . PHP_EOL;
+    exit(1);
+}
+
+if (array_key_exists('state', $opts)) {
+    echo "State file is not currently implemented and is ignored" . PHP_EOL;
+}
+
+$config = Config::fromFile($opts['config']);
+$pdo = new \PDO($config->dsn, $config->username, $config->password);
+$tap = new Tap($config, $pdo);
+echo $tap->tap();
