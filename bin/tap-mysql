@@ -1,4 +1,6 @@
+#!/usr/bin/env php
 <?php
+
 declare(strict_types=1);
 
 use PhpETL\Tap\MySQL\Config;
@@ -10,6 +12,7 @@ $opts = getopt('', [
     'config:',
     'state:',
     'catalog:',
+    'generate:',
 ]);
 
 if (!array_key_exists('config', $opts)) {
@@ -23,5 +26,48 @@ if (array_key_exists('state', $opts)) {
 
 $config = Config::fromFile($opts['config']);
 $pdo = new \PDO($config->dsn, $config->username, $config->password);
-$tap = new Tap($config, $pdo);
-echo $tap->tap();
+
+if (array_key_exists('generate', $opts)) {
+    $stmt = $pdo->prepare('SELECT * FROM information_schema.columns WHERE table_name = :table');
+    $stmt->execute(['table' => $opts['generate']]);
+
+    $schema = [];
+    foreach ($stmt->fetchAll(\PDO::FETCH_ASSOC) as $column) {
+        $type = explode('(', $column['COLUMN_TYPE'])[0];
+        switch ($type) {
+            case 'int':
+                $schema[$column['COLUMN_NAME']] = ['type' => ['integer']];
+                if ($column['COLUMN_TYPE'] === 'int(1)') {
+                    $schema[$column['COLUMN_NAME']] = ['type' => ['boolean']];
+                }
+                if ($column['IS_NULLABLE'] === 'YES') {
+                    $schema[$column['COLUMN_NAME']]['type'][] = 'null';
+                }
+                if (strpos($column['COLUMN_TYPE'], 'unsigned') !== false) {
+                    $schema[$column['COLUMN_NAME']]['minimum'] = 0;
+                }
+                break;
+            case 'boolean':
+                break;
+            case 'longtext':
+            case 'text':
+                $schema[$column['COLUMN_NAME']] = ['type' => ['string']];
+                if ($column['IS_NULLABLE'] === 'YES') {
+                    $schema[$column['COLUMN_NAME']]['type'][] = 'null';
+                }
+                break;
+            case 'varchar':
+                $schema[$column['COLUMN_NAME']] = ['type' => ['string']];
+                preg_match('/varchar\((\d.*)\)/', $column['COLUMN_TYPE'], $matches);
+                if ($matches) {
+                    $schema[$column['COLUMN_NAME']]['maxLength'] = $matches[1];
+                }
+                break;
+        }
+    }
+
+    echo json_encode(['schema' => ['properties' => $schema]], JSON_PRETTY_PRINT) . PHP_EOL;
+} else {
+    $tap = new Tap($config, $pdo);
+    echo $tap->tap();
+}

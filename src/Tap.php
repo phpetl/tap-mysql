@@ -51,6 +51,19 @@ class Tap
                 $recordData = [];
                 foreach ($stream['schema']['properties'] as $columnName => $settings) {
                     $value = $data[$columnName];
+                    if (is_array($settings['type'])) {
+                        $nullKey = array_search("null", $settings['type']);
+                        if ($nullKey !== false) {
+                            unset($settings['type'][$nullKey]);
+                        }
+
+                        // We allow multiple data types, so distill it down to a varchar
+                        if (count($settings['type']) === 1) {
+                            $settings['type'] = array_pop($settings['type']);
+                        } else {
+                            $settings['type'] = 'string';
+                        }
+                    }
                     switch($settings['type']) {
                         case 'bool':
                         case 'boolean':
